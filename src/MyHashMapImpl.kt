@@ -14,6 +14,9 @@ class MyHashMapImpl<K, V>(
     override var size: Int = 0
         private set
 
+    override val isEmpty: Boolean
+        get() = size == 0
+
 
     private fun indexFor(hash: Int): Int {
         return hash and (buckets.size - 1)
@@ -42,7 +45,7 @@ class MyHashMapImpl<K, V>(
         buckets = newBuckets
     }
 
-    override fun put(key: K, value: V): V? {
+    override fun put(key: K, value: V): Boolean {
         val result = putInternal(key, value)
         if (size > buckets.size * loadFactor) {
             resize()
@@ -50,7 +53,7 @@ class MyHashMapImpl<K, V>(
         return result
     }
 
-    private fun putInternal(key: K, value: V): V? {
+    private fun putInternal(key: K, value: V): Boolean {
         val hash = key.hashCode()
         val index = indexFor(hash)
         var current = buckets[index]
@@ -58,27 +61,29 @@ class MyHashMapImpl<K, V>(
         if (current == null) {
             buckets[index] = Node(key, value, hash)
             size++
-            return null
+            return true
         } else {
             while (current != null) {
                 if (current.key == key) {
-                    val oldValue = current.value
                     current.value = value
-                    return oldValue
+                    return false
                 }
                 if (current.next == null) {
                     current.next = Node(key, value, hash)
                     size++
-                    return null
+                    return true
                 }
                 current = current.next
             }
         }
-        return null
+        return false
     }
 
+    override operator fun set(key: K, value: V) {
+        put(key, value)
+    }
 
-    override fun get(key: K): V? {
+    override operator  fun get(key: K): V? {
         val hash = key.hashCode()
         val index = indexFor(hash)
         var current = buckets[index]
@@ -95,21 +100,16 @@ class MyHashMapImpl<K, V>(
     override fun remove(key: K): V? {
         val hash = key.hashCode()
         val index = indexFor(hash)
-
-        val first = buckets[index] ?: return null
-
-        if (first.key == key) {
-            buckets[index] = first.next
-            size--
-            return first.value
-        }
-
-        var prev = first
-        var current = first.next
+        var prev: Node<K, V>? = null
+        var current = buckets[index]
 
         while (current != null) {
             if (current.key == key) {
-                prev.next = current.next
+                if (prev == null) {
+                    buckets[index] = current.next
+                } else {
+                    prev.next = current.next
+                }
                 size--
                 return current.value
             }
@@ -123,10 +123,5 @@ class MyHashMapImpl<K, V>(
     override fun containsKey(key: K): Boolean {
         return get(key) != null
     }
-
-
-
-
-
 
 }
